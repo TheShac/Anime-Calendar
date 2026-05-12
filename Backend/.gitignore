@@ -4,4 +4,4 @@ node_modules
 
 drizzle
 
-scripts/createAdmin.js
+src/scripts/createAdmin.js
