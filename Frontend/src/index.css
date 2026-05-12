@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: sans-serif;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
+}
+
+/**
+ * DARK
+ */
+.dark body {
+  background: #000;
+  color: white;
+}
+
+/**
+ * LIGHT
+ */
+.light body {
+  background: #f4f4f5;
+  color: #111827;
+}
