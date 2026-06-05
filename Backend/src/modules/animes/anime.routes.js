@@ -23,25 +23,16 @@ router.get("/:id", getAnime);
 /**
  * CREATE
  */
-router.post(
-  "/",
-  createAnimeController
-);
+router.post("/", createAnimeController);
 
 /**
  * UPDATE
  */
-router.put(
-  "/:id",
-  updateAnimeController
-);
+router.put("/:id", updateAnimeController);
 
 /**
  * DELETE
  */
-router.delete(
-  "/:id",
-  deleteAnimeController
-);
+router.delete("/:id", deleteAnimeController);
 
 export default router;

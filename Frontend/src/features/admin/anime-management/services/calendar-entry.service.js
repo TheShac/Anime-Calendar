@@ -8,13 +8,17 @@ const getHeaders = () => {
   };
 };
 
-export async function getActiveSeason() {
+export async function getSeasons() {
   const response = await fetch(`${API_URL}/admin/seasons`, {
     headers: getHeaders(),
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message);
-  const seasons = result.data;
+  return Array.isArray(result.data) ? result.data : [];
+}
+
+export async function getActiveSeason() {
+  const seasons = await getSeasons();
   return seasons.find((s) => s.isActive) ?? seasons[0];
 }
 

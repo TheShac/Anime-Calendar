@@ -27,7 +27,8 @@ export function useAnimes() {
           time:            entry?.time      ?? "",
         };
       });
-
+      console.log("calendarData:", calendarData);
+      console.log("entries:", entries);
       setAnimes(merged);
     } catch (err) {
       setError(err.message);
@@ -35,7 +36,7 @@ export function useAnimes() {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => { fetchAnimes(); }, []);
 
   return { animes, loading, error, refetch: fetchAnimes };

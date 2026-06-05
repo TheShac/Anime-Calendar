@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X, Clock } from "lucide-react";
 import Modal from "../../../../components/ui/modal/Modal";
 import { DAYS } from "../../../../constants/days";
+import { getSeasons } from "../services/calendar-entry.service";
 
 const FIELD_STYLE = {
   width: "100%",
@@ -26,31 +27,51 @@ const LABEL_STYLE = {
 };
 
 const STATUS_OPTIONS = [
-  { value: "crunchyroll",   label: "Crunchyroll"        },
-  { value: "netflix",       label: "Netflix"            },
-  { value: "disney",        label: "Disney+"            },
-  { value: "amazon",        label: "Amazon Prime Video" },
-  { value: "alternativa",   label: "Alternativa"        },
+  { value: "crunchyroll", label: "Crunchyroll"        },
+  { value: "netflix",     label: "Netflix"            },
+  { value: "disney",      label: "Disney+"            },
+  { value: "amazon",      label: "Amazon Prime Video" },
+  { value: "alternativa", label: "Alternativa"        },
 ];
 
 export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving }) {
   const [form, setForm] = useState({
     title: "", imageUrl: "", description: "",
-    status: "ongoing", dayOfWeek: "lunes", time: "00:00",
+    status: "crunchyroll", dayOfWeek: "lunes", time: "00:00", seasonId: "",
   });
+  const [seasons, setSeasons] = useState([]);
 
+  // carga temporadas al abrir
+  useEffect(() => {
+    if (!open) return;
+    getSeasons().then((data) => {
+      setSeasons(data);
+      // si no hay seasonId en el form, pone la activa por defecto
+      setForm((prev) => ({
+        ...prev,
+        seasonId: prev.seasonId || data.find((s) => s.isActive)?.id || data[0]?.id || "",
+      }));
+    }).catch(() => {});
+  }, [open]);
+
+  // rellena form al editar
   useEffect(() => {
     if (anime) {
       setForm({
         title:       anime.title       || "",
         imageUrl:    anime.imageUrl    || "",
         description: anime.description || "",
-        status:      anime.status      || "ongoing",
+        status:      anime.status      || "crunchyroll",
         dayOfWeek:   anime.dayOfWeek   || "lunes",
         time:        anime.time        || "00:00",
+        seasonId:    anime.seasonId    || "",
       });
     } else {
-      setForm({ title: "", imageUrl: "", description: "", status: "ongoing", dayOfWeek: "lunes", time: "00:00" });
+      setForm((prev) => ({
+        title: "", imageUrl: "", description: "",
+        status: "crunchyroll", dayOfWeek: "lunes", time: "00:00",
+        seasonId: prev.seasonId, // mantiene la temporada seleccionada
+      }));
     }
   }, [anime, open]);
 
@@ -68,7 +89,6 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
   return (
     <Modal isOpen={open} onClose={onClose} maxWidth="max-w-lg">
       <div style={{ padding: "28px" }}>
-        {/* header */}
         <div className="flex items-center justify-between" style={{ marginBottom: "24px" }}>
           <h2 className="font-black" style={{ fontSize: "20px", color: "#f0f0f0" }}>
             {anime ? "Editar anime" : "Nuevo anime"}
@@ -120,9 +140,9 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
             />
           </div>
 
-          {/* estado */}
+          {/* plataforma */}
           <div>
-            <label style={LABEL_STYLE}>Estado</label>
+            <label style={LABEL_STYLE}>Plataforma</label>
             <select
               name="status" value={form.status} onChange={handleChange}
               style={{ ...FIELD_STYLE, cursor: "pointer" }}
@@ -133,7 +153,26 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
             </select>
           </div>
 
-          {/* día y hora — fila */}
+          {/* temporada */}
+          <div>
+            <label style={LABEL_STYLE}>Temporada</label>
+            <select
+              name="seasonId" value={form.seasonId} onChange={handleChange}
+              style={{ ...FIELD_STYLE, cursor: "pointer" }}
+              required
+            >
+              {seasons.length === 0 && (
+                <option value="">Cargando temporadas...</option>
+              )}
+              {seasons.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}{s.isActive ? " (activa)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* día y hora */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div>
               <label style={LABEL_STYLE}>Día</label>
@@ -148,7 +187,6 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
                 ))}
               </select>
             </div>
-
             <div>
               <label style={LABEL_STYLE}>
                 <span className="flex items-center gap-1">
@@ -164,10 +202,8 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
             </div>
           </div>
 
-          {/* divider */}
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: "4px" }} />
 
-          {/* botón */}
           <button
             type="submit"
             disabled={saving}
@@ -191,7 +227,6 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
               anime ? "Guardar cambios" : "Crear anime"
             )}
           </button>
-
         </form>
       </div>
     </Modal>
