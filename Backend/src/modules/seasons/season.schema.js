@@ -4,6 +4,7 @@ export const seasons = pgTable("seasons", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   slug: varchar("slug", { length: 100 }).notNull(),
-  isActive: boolean("is_active").default(true),
+  isActive: boolean("is_active").default(false),
+  isNext:    boolean("is_next").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });

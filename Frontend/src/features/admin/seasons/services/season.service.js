@@ -9,19 +9,15 @@ const getHeaders = () => {
 };
 
 export async function getSeasons() {
-  const response = await fetch(`${API_URL}/admin/seasons`, {
-    headers: getHeaders(),
-  });
+  const response = await fetch(`${API_URL}/admin/seasons`, { headers: getHeaders() });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message);
-  return result.data;
+  return Array.isArray(result.data) ? result.data : [];
 }
 
 export async function createSeason(data) {
   const response = await fetch(`${API_URL}/admin/seasons`, {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify(data),
+    method: "POST", headers: getHeaders(), body: JSON.stringify(data),
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message);
@@ -30,9 +26,7 @@ export async function createSeason(data) {
 
 export async function updateSeason(id, data) {
   const response = await fetch(`${API_URL}/admin/seasons/${id}`, {
-    method: "PUT",
-    headers: getHeaders(),
-    body: JSON.stringify(data),
+    method: "PUT", headers: getHeaders(), body: JSON.stringify(data),
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message);
@@ -41,8 +35,7 @@ export async function updateSeason(id, data) {
 
 export async function deleteSeason(id) {
   const response = await fetch(`${API_URL}/admin/seasons/${id}`, {
-    method: "DELETE",
-    headers: getHeaders(),
+    method: "DELETE", headers: getHeaders(),
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message);
@@ -51,8 +44,25 @@ export async function deleteSeason(id) {
 
 export async function activateSeason(id) {
   const response = await fetch(`${API_URL}/admin/seasons/${id}/activate`, {
-    method: "PATCH",
-    headers: getHeaders(),
+    method: "PATCH", headers: getHeaders(),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message);
+  return result.data;
+}
+
+export async function markAsNext(id) {
+  const response = await fetch(`${API_URL}/admin/seasons/${id}/mark-next`, {
+    method: "PATCH", headers: getHeaders(),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message);
+  return result.data;
+}
+
+export async function unmarkAsNext(id) {
+  const response = await fetch(`${API_URL}/admin/seasons/${id}/unmark-next`, {
+    method: "PATCH", headers: getHeaders(),
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message);

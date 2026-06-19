@@ -25,6 +25,8 @@ export function useAnimes() {
           calendarEntryId: entry?.id        ?? null,
           dayOfWeek:       entry?.dayOfWeek ?? "",
           time:            entry?.time      ?? "",
+          seasonId:        entry?.seasonId  ?? "",
+          seasonName:      entry?.seasonName ?? "",
         };
       });
       console.log("calendarData:", calendarData);

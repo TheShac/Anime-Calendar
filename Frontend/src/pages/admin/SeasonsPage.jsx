@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Plus, Check, Pencil, Trash2 } from "lucide-react";
+import { Plus, Check, Pencil, Trash2, Sparkles } from "lucide-react";
 
 import AdminLayout       from "../../layouts/AdminLayout";
 import AdminHeader       from "../../features/admin/components/AdminHeader";
 import SeasonFormModal   from "../../features/admin/seasons/components/SeasonFormModal";
 import DeleteSeasonModal from "../../features/admin/seasons/components/DeleteSeasonModal";
 
-import { createSeason, updateSeason, deleteSeason, activateSeason } from "../../features/admin/seasons/services/season.service";
+import {
+  createSeason, updateSeason, deleteSeason,
+  activateSeason, markAsNext, unmarkAsNext,
+} from "../../features/admin/seasons/services/season.service";
 import { useSeasons } from "../../features/admin/seasons/hooks/useSeasons";
 
 export default function SeasonsPage() {
@@ -17,9 +20,10 @@ export default function SeasonsPage() {
   const [selectedSeason, setSelectedSeason] = useState(null);
   const [saving,         setSaving]         = useState(false);
   const [activating,     setActivating]     = useState(null);
+  const [markingNext,    setMarkingNext]    = useState(null);
 
   useEffect(() => {
-    document.title = "Temporadas — AniCalendar";
+    document.title = "Temporadas — AniCalendar Admin";
   }, []);
 
   const handleCreate = async (data) => {
@@ -28,11 +32,8 @@ export default function SeasonsPage() {
       await createSeason(data);
       setOpenModal(false);
       refetch();
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { alert(err.message); }
+    finally { setSaving(false); }
   };
 
   const handleEdit = async (data) => {
@@ -42,11 +43,8 @@ export default function SeasonsPage() {
       setOpenModal(false);
       setSelectedSeason(null);
       refetch();
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { alert(err.message); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
@@ -55,9 +53,7 @@ export default function SeasonsPage() {
       setDeleteModal(false);
       setSelectedSeason(null);
       refetch();
-    } catch (err) {
-      alert(err.message);
-    }
+    } catch (err) { alert(err.message); }
   };
 
   const handleActivate = async (season) => {
@@ -65,11 +61,21 @@ export default function SeasonsPage() {
       setActivating(season.id);
       await activateSeason(season.id);
       refetch();
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setActivating(null);
-    }
+    } catch (err) { alert(err.message); }
+    finally { setActivating(null); }
+  };
+
+  const handleMarkNext = async (season) => {
+    try {
+      setMarkingNext(season.id);
+      if (season.isNext) {
+        await unmarkAsNext(season.id);
+      } else {
+        await markAsNext(season.id);
+      }
+      refetch();
+    } catch (err) { alert(err.message); }
+    finally { setMarkingNext(null); }
   };
 
   const openCreateModal = () => { setSelectedSeason(null); setOpenModal(true); };
@@ -114,7 +120,6 @@ export default function SeasonsPage() {
           </button>
         </div>
 
-        {/* tabla */}
         <div style={{
           background: "#111111",
           border: "1px solid rgba(255,255,255,0.07)",
@@ -127,8 +132,7 @@ export default function SeasonsPage() {
                   <th key={h} style={{
                     padding: "14px 20px", textAlign: "left",
                     fontSize: "11px", fontWeight: 700,
-                    textTransform: "uppercase", letterSpacing: "0.08em",
-                    color: "#52525b",
+                    textTransform: "uppercase", letterSpacing: "0.08em", color: "#52525b",
                   }}>
                     {h}
                   </th>
@@ -154,43 +158,55 @@ export default function SeasonsPage() {
 
                   <td style={{ padding: "16px 20px" }}>
                     <span style={{
-                      fontSize: "12px", fontFamily: "monospace",
-                      color: "#71717a", background: "rgba(255,255,255,0.05)",
-                      padding: "3px 8px", borderRadius: "6px",
-                      border: "1px solid rgba(255,255,255,0.06)",
+                      fontSize: "12px", fontFamily: "monospace", color: "#71717a",
+                      background: "rgba(255,255,255,0.05)", padding: "3px 8px",
+                      borderRadius: "6px", border: "1px solid rgba(255,255,255,0.06)",
                     }}>
                       {season.slug}
                     </span>
                   </td>
 
                   <td style={{ padding: "16px 20px" }}>
-                    {season.isActive ? (
-                      <span className="flex items-center gap-1.5" style={{
-                        fontSize: "12px", fontWeight: 700,
-                        color: "#10b981",
-                        background: "rgba(16,185,129,0.12)",
-                        border: "1px solid rgba(16,185,129,0.2)",
-                        padding: "4px 10px", borderRadius: "20px",
-                        display: "inline-flex",
-                      }}>
-                        <Check size={11} aria-hidden="true" />
-                        Activa
-                      </span>
-                    ) : (
-                      <span style={{
-                        fontSize: "12px", fontWeight: 600, color: "#52525b",
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.06)",
-                        padding: "4px 10px", borderRadius: "20px",
-                        display: "inline-block",
-                      }}>
-                        Inactiva
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {season.isActive && (
+                        <span className="flex items-center gap-1.5" style={{
+                          fontSize: "12px", fontWeight: 700, color: "#10b981",
+                          background: "rgba(16,185,129,0.12)",
+                          border: "1px solid rgba(16,185,129,0.2)",
+                          padding: "4px 10px", borderRadius: "20px", display: "inline-flex",
+                        }}>
+                          <Check size={11} aria-hidden="true" />
+                          Activa
+                        </span>
+                      )}
+                      {season.isNext && (
+                        <span className="flex items-center gap-1.5" style={{
+                          fontSize: "12px", fontWeight: 700, color: "#a78bfa",
+                          background: "rgba(139,92,246,0.12)",
+                          border: "1px solid rgba(139,92,246,0.2)",
+                          padding: "4px 10px", borderRadius: "20px", display: "inline-flex",
+                        }}>
+                          <Sparkles size={11} aria-hidden="true" />
+                          Próxima
+                        </span>
+                      )}
+                      {!season.isActive && !season.isNext && (
+                        <span style={{
+                          fontSize: "12px", fontWeight: 600, color: "#52525b",
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.06)",
+                          padding: "4px 10px", borderRadius: "20px", display: "inline-block",
+                        }}>
+                          Inactiva
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   <td style={{ padding: "16px 20px" }}>
                     <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+
+                      {/* activar */}
                       {!season.isActive && (
                         <button
                           onClick={() => handleActivate(season)}
@@ -209,6 +225,31 @@ export default function SeasonsPage() {
                           {activating === season.id ? "Activando..." : "Activar"}
                         </button>
                       )}
+
+                      {/* marcar como próxima */}
+                      {!season.isActive && (
+                        <button
+                          onClick={() => handleMarkNext(season)}
+                          disabled={markingNext === season.id}
+                          className="flex items-center gap-1.5"
+                          style={{
+                            padding: "7px 14px", borderRadius: "8px",
+                            background: season.isNext ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.08)",
+                            border: `1px solid ${season.isNext ? "rgba(139,92,246,0.4)" : "rgba(139,92,246,0.2)"}`,
+                            color: "#a78bfa", fontSize: "13px", fontWeight: 600,
+                            cursor: markingNext === season.id ? "not-allowed" : "pointer",
+                            opacity: markingNext === season.id ? 0.6 : 1,
+                          }}
+                        >
+                          <Sparkles size={13} aria-hidden="true" />
+                          {markingNext === season.id
+                            ? "Guardando..."
+                            : season.isNext ? "Quitar próxima" : "Marcar próxima"
+                          }
+                        </button>
+                      )}
+
+                      {/* editar */}
                       <button
                         onClick={() => openEditModal(season)}
                         className="flex items-center gap-1.5"
@@ -221,6 +262,8 @@ export default function SeasonsPage() {
                       >
                         <Pencil size={13} aria-hidden="true" /> Editar
                       </button>
+
+                      {/* eliminar */}
                       <button
                         onClick={() => openDeleteModal(season)}
                         disabled={season.isActive}

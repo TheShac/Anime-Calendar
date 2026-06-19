@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Tv2, CalendarDays, Leaf, LogOut } from "lucide-react";
 import { useAuthStore } from "../../../store/authStore";
+import { useSidebarMobile } from "../../../layouts/AdminLayout";
 
 const NAV_ITEMS = [
   { to: "/admin",        icon: LayoutDashboard, label: "Dashboard"   },
@@ -9,13 +10,18 @@ const NAV_ITEMS = [
   { to: "/admin/seasons",  icon: Leaf,          label: "Temporadas"  },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }) {
   const logout   = useAuthStore((state) => state.logout);
   const location = useLocation();
+  const { setSidebarOpen } = useSidebarMobile();
 
   const handleLogout = () => {
     logout();
     window.location.href = "/login";
+  };
+
+  const handleNavClick = () => {
+    setSidebarOpen(false);
   };
 
   return (
@@ -52,6 +58,7 @@ export default function Sidebar() {
             <Link
               key={to}
               to={to}
+              onClick={handleNavClick}
               className="flex items-center gap-3 rounded-xl transition-colors"
               style={{
                 padding: "10px 14px",

@@ -1,4 +1,5 @@
 import { Pencil, Trash2, Clock, Check } from "lucide-react";
+import { useState } from "react";
 
 const PLATFORM_STYLES = {
   crunchyroll: { bg: "rgba(249,115,22,0.12)",  color: "#f97316", label: "Crunchyroll"  },
@@ -41,7 +42,8 @@ function CustomCheckbox({ checked, onChange, indeterminate, label }) {
   );
 }
 
-export default function AnimeTable({ animes, onEdit, onDelete, selectedIds, onToggleSelect, onToggleSelectAll }) {
+// Vista Desktop - Tabla
+function DesktopView({ animes, onEdit, onDelete, selectedIds, onToggleSelect, onToggleSelectAll }) {
   const allSelected  = selectedIds.size === animes.length && animes.length > 0;
   const someSelected = selectedIds.size > 0 && selectedIds.size < animes.length;
 
@@ -161,5 +163,96 @@ export default function AnimeTable({ animes, onEdit, onDelete, selectedIds, onTo
         </tbody>
       </table>
     </div>
+  );
+}
+
+// Vista Mobile - Tarjetas
+function MobileView({ animes, onEdit, onDelete, selectedIds, onToggleSelect, onToggleSelectAll }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {animes.map((anime) => {
+        const platform = getPlatform(anime.status);
+        const isSelected = selectedIds.has(anime.id);
+        return (
+          <div
+            key={anime.id}
+            style={{
+              background: isSelected ? "rgba(16,185,129,0.1)" : "#111111",
+              border: isSelected ? "1px solid rgba(16,185,129,0.3)" : "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "12px", padding: "16px",
+              transition: "all 0.15s",
+            }}
+          >
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+              <CustomCheckbox
+                checked={isSelected}
+                onChange={() => onToggleSelect(anime.id)}
+                label={`Seleccionar ${anime.title}`}
+              />
+              <img
+                src={anime.imageUrl} alt={anime.title}
+                style={{ width: "56px", height: "78px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: "14px", fontWeight: 700, color: "#f0f0f0", marginBottom: "4px", wordBreak: "break-word" }}>{anime.title}</p>
+                <span style={{
+                  fontSize: "11px", fontWeight: 700, textTransform: "uppercase",
+                  letterSpacing: "0.05em", padding: "3px 8px", borderRadius: "16px",
+                  background: platform.bg, color: platform.color, display: "inline-block", marginBottom: "8px",
+                }}>
+                  {platform.label}
+                </span>
+                <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "#a1a1aa" }}>
+                  {anime.dayOfWeek && <span style={{ textTransform: "capitalize" }}>{anime.dayOfWeek}</span>}
+                  {anime.time && <span style={{ fontFamily: "monospace" }}>{anime.time}</span>}
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+              <button
+                onClick={() => onEdit(anime)}
+                className="flex items-center justify-center gap-1"
+                style={{
+                  flex: 1, padding: "8px 12px", borderRadius: "8px",
+                  background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.2)",
+                  color: "#60a5fa", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                <Pencil size={14} aria-hidden="true" />
+                Editar
+              </button>
+              <button
+                onClick={() => onDelete(anime)}
+                className="flex items-center justify-center gap-1"
+                style={{
+                  flex: 1, padding: "8px 12px", borderRadius: "8px",
+                  background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)",
+                  color: "#f87171", fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                }}
+              >
+                <Trash2 size={14} aria-hidden="true" />
+                Eliminar
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function AnimeTable({ animes, onEdit, onDelete, selectedIds, onToggleSelect, onToggleSelectAll }) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useState(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isMobile ? (
+    <MobileView animes={animes} onEdit={onEdit} onDelete={onDelete} selectedIds={selectedIds} onToggleSelect={onToggleSelect} onToggleSelectAll={onToggleSelectAll} />
+  ) : (
+    <DesktopView animes={animes} onEdit={onEdit} onDelete={onDelete} selectedIds={selectedIds} onToggleSelect={onToggleSelect} onToggleSelectAll={onToggleSelectAll} />
   );
 }

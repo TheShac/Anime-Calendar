@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { getWeeklyCalendar, getWeeklyCalendarCached } from "../services/calendar.service";
+import {
+  getWeeklyCalendar, getWeeklyCalendarCached,
+  getNextSeasonCalendar, getNextCalendarCached,
+} from "../services/calendar.service";
 
 const INITIAL_CALENDAR = {
   season: null,
-  days: {
-    lunes: [], martes: [], miercoles: [],
-    jueves: [], viernes: [], sabado: [], domingo: [],
-  },
+  days: { lunes:[], martes:[], miercoles:[], jueves:[], viernes:[], sabado:[], domingo:[] },
 };
 
-export function useWeeklyAnimes() {
+export function useWeeklyAnimes(mode = "current") {
   const [calendar, setCalendar] = useState(INITIAL_CALENDAR);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
@@ -17,20 +17,32 @@ export function useWeeklyAnimes() {
   useEffect(() => {
     let mounted = true;
 
+    const isNext    = mode === "next";
+    const getFresh  = isNext ? getNextSeasonCalendar : getWeeklyCalendar;
+    const getCached = isNext ? getNextCalendarCached : getWeeklyCalendarCached;
+
     const fetchCalendar = async () => {
-      const cached = getWeeklyCalendarCached();
+      setLoading(true);
+      setError(null);
+
+      const cached = getCached();
       if (cached && mounted) {
         setCalendar(cached);
         setLoading(false);
       }
 
       try {
-        const fresh = await getWeeklyCalendar();
+        const fresh = await getFresh();
         if (!mounted) return;
         setCalendar(fresh);
       } catch (err) {
         if (!mounted) return;
-        if (!cached) setError(err.message);
+        // si es "next" y no hay temporada próxima, muestra mensaje amigable
+        if (isNext) {
+          setError("No hay próxima temporada configurada aún.");
+        } else if (!cached) {
+          setError(err.message);
+        }
       } finally {
         if (!mounted) return;
         setLoading(false);
@@ -39,7 +51,7 @@ export function useWeeklyAnimes() {
 
     fetchCalendar();
     return () => { mounted = false; };
-  }, []);
+  }, [mode]);
 
   return { calendar, loading, error };
 }
