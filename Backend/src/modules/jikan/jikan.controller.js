@@ -13,10 +13,10 @@ const CACHE_TTL   = 6 * 60 * 60 * 1000; // 6 horas
 const DAY_MAP = {
   mondays:    "lunes",
   tuesdays:   "martes",
-  wednesdays: "miércoles",
+  wednesdays: "miercoles",
   thursdays:  "jueves",
   fridays:    "viernes",
-  saturdays:  "sábado",
+  saturdays:  "sabado",
   sundays:    "domingo",
 };
 

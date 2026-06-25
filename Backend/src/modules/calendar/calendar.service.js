@@ -4,6 +4,9 @@ import {
 } from "./calendar.model.js";
 import { findNextSeason } from "../seasons/season.model.js";
 
+const normalizeDay = (day) =>
+  (day || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
 export async function getPublicCalendarService() {
   const rows = await findPublicCalendar();
   if (!rows.length) throw new Error("No active season found");
@@ -16,11 +19,12 @@ export async function getPublicCalendarService() {
   const days = { lunes:[], martes:[], miercoles:[], jueves:[], viernes:[], sabado:[], domingo:[] };
 
   rows.forEach((row) => {
-    if (days[row.dayOfWeek] !== undefined) {
-      days[row.dayOfWeek].push({
+    const key = normalizeDay(row.dayOfWeek);
+    if (days[key] !== undefined) {
+      days[key].push({
         id: row.entryId, animeId: row.animeId, title: row.title,
         imageUrl: row.imageUrl, description: row.description,
-        status: row.status, time: row.time, dayOfWeek: row.dayOfWeek,
+        status: row.status, time: row.time, dayOfWeek: key,
         malId: row.malId ?? null,
       });
     }
@@ -38,11 +42,12 @@ export async function getNextSeasonCalendarService() {
   const days = { lunes:[], martes:[], miercoles:[], jueves:[], viernes:[], sabado:[], domingo:[] };
 
   rows.forEach((row) => {
-    if (days[row.dayOfWeek] !== undefined) {
-      days[row.dayOfWeek].push({
+    const key = normalizeDay(row.dayOfWeek);
+    if (days[key] !== undefined) {
+      days[key].push({
         id: row.entryId, animeId: row.animeId, title: row.title,
         imageUrl: row.imageUrl, description: row.description,
-        status: row.status, time: row.time, dayOfWeek: row.dayOfWeek,
+        status: row.status, time: row.time, dayOfWeek: key,
         malId: row.malId ?? null,
       });
     }
