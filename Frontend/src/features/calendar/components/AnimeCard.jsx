@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Clock } from "lucide-react";
 import { useTheme } from "../../../context/ThemeContext";
@@ -17,6 +18,7 @@ export default function AnimeCard({ anime, onClick }) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const platform = getPlatform(anime.status);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   return (
     <motion.div
@@ -30,35 +32,51 @@ export default function AnimeCard({ anime, onClick }) {
         borderColor: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.08)",
       }}
     >
-      <div className="relative">
+      <div className="relative" style={{ height: "280px" }}>
+
+        {/* skeleton placeholder mientras carga la imagen */}
+        {!imgLoaded && (
+          <div
+            style={{
+              position: "absolute", inset: 0,
+              background: isDark
+                ? "linear-gradient(110deg, #1a1a1a 30%, #222 50%, #1a1a1a 70%)"
+                : "linear-gradient(110deg, #e5e7eb 30%, #f3f4f6 50%, #e5e7eb 70%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.4s infinite linear",
+            }}
+          />
+        )}
+
         <img
           loading="lazy"
           src={anime.imageUrl}
           alt={anime.title}
+          onLoad={() => setImgLoaded(true)}
           className="w-full object-cover block"
-          style={{ height: "280px" }}
+          style={{
+            height: "280px",
+            opacity: imgLoaded ? 1 : 0,
+            transition: "opacity 0.4s ease",
+          }}
         />
 
-        {/* badge mejorado */}
-        <div
-          className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2.5 py-1 rounded-lg"
-          style={{
-            background: "rgba(0,0,0,0.55)",
-            backdropFilter: "blur(8px)",
-            border: `1px solid ${platform.border}`,
-          }}
-        >
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: platform.color }}
-          />
-          <span
-            className="text-[12px] font-bold tracking-wide"
-            style={{ color: platform.color }}
+        {/* badge plataforma */}
+        {imgLoaded && (
+          <div
+            className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2.5 py-1 rounded-lg"
+            style={{
+              background: "rgba(0,0,0,0.55)",
+              backdropFilter: "blur(8px)",
+              border: `1px solid ${platform.border}`,
+            }}
           >
-            {platform.label}
-          </span>
-        </div>
+            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: platform.color }} />
+            <span className="text-[12px] font-bold tracking-wide" style={{ color: platform.color }}>
+              {platform.label}
+            </span>
+          </div>
+        )}
 
         <div
           className="absolute inset-0 pointer-events-none"

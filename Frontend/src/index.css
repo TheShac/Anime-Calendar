@@ -28,3 +28,8 @@ body {
   background: #f4f4f5;
   color: #111827;
 }
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

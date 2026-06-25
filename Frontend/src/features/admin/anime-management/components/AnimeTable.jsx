@@ -1,6 +1,31 @@
 import { Pencil, Trash2, Clock, Check } from "lucide-react";
 import { useState } from "react";
 
+function LazyImg({ src, alt, style }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div style={{ ...style, position: "relative", flexShrink: 0, background: "#1a1a1a", borderRadius: style.borderRadius }}>
+      {!loaded && (
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: style.borderRadius,
+          background: "linear-gradient(110deg, #1a1a1a 30%, #222 50%, #1a1a1a 70%)",
+          backgroundSize: "200% 100%",
+          animation: "shimmer 1.4s infinite linear",
+        }} />
+      )}
+      <img
+        src={src} alt={alt} loading="lazy"
+        onLoad={() => setLoaded(true)}
+        style={{
+          ...style, display: "block",
+          opacity: loaded ? 1 : 0,
+          transition: "opacity 0.3s ease",
+        }}
+      />
+    </div>
+  );
+}
+
 const PLATFORM_STYLES = {
   crunchyroll: { bg: "rgba(249,115,22,0.12)",  color: "#f97316", label: "Crunchyroll"  },
   netflix:     { bg: "rgba(220,38,38,0.12)",   color: "#ef4444", label: "Netflix"      },
@@ -100,7 +125,7 @@ function DesktopView({ animes, onEdit, onDelete, selectedIds, onToggleSelect, on
                   />
                 </td>
                 <td style={{ padding: "14px 20px" }}>
-                  <img
+                  <LazyImg
                     src={anime.imageUrl} alt={anime.title}
                     style={{ width: "48px", height: "66px", objectFit: "cover", borderRadius: "8px" }}
                   />
@@ -189,7 +214,7 @@ function MobileView({ animes, onEdit, onDelete, selectedIds, onToggleSelect, onT
                 onChange={() => onToggleSelect(anime.id)}
                 label={`Seleccionar ${anime.title}`}
               />
-              <img
+              <LazyImg
                 src={anime.imageUrl} alt={anime.title}
                 style={{ width: "56px", height: "78px", objectFit: "cover", borderRadius: "8px", flexShrink: 0 }}
               />
