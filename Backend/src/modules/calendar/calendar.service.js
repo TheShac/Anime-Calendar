@@ -21,6 +21,7 @@ export async function getPublicCalendarService() {
         id: row.entryId, animeId: row.animeId, title: row.title,
         imageUrl: row.imageUrl, description: row.description,
         status: row.status, time: row.time, dayOfWeek: row.dayOfWeek,
+        malId: row.malId ?? null,
       });
     }
   });
@@ -42,6 +43,7 @@ export async function getNextSeasonCalendarService() {
         id: row.entryId, animeId: row.animeId, title: row.title,
         imageUrl: row.imageUrl, description: row.description,
         status: row.status, time: row.time, dayOfWeek: row.dayOfWeek,
+        malId: row.malId ?? null,
       });
     }
   });

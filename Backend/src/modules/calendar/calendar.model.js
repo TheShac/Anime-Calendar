@@ -10,6 +10,7 @@ export async function findPublicCalendar() {
       entryId: calendarEntries.id, dayOfWeek: calendarEntries.dayOfWeek,
       time: calendarEntries.time, animeId: animes.id, title: animes.title,
       imageUrl: animes.imageUrl, description: animes.description, status: animes.status,
+      malId: animes.malId,
       seasonId: seasons.id, seasonName: seasons.name, seasonSlug: seasons.slug, isActive: seasons.isActive,
     })
     .from(calendarEntries)
@@ -24,6 +25,7 @@ export async function findPublicCalendarBySeason(seasonId) {
       entryId: calendarEntries.id, dayOfWeek: calendarEntries.dayOfWeek,
       time: calendarEntries.time, animeId: animes.id, title: animes.title,
       imageUrl: animes.imageUrl, description: animes.description, status: animes.status,
+      malId: animes.malId,
       seasonId: seasons.id, seasonName: seasons.name, seasonSlug: seasons.slug, isActive: seasons.isActive,
     })
     .from(calendarEntries)

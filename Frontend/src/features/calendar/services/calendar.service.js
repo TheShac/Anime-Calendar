@@ -13,6 +13,12 @@ function getCache(key) {
       localStorage.removeItem(key);
       return null;
     }
+    // invalida caché viejo que no tenga malId
+    const firstAnime = Object.values(data?.days || {}).find((arr) => arr.length > 0)?.[0];
+    if (firstAnime && !("malId" in firstAnime)) {
+      localStorage.removeItem(key);
+      return null;
+    }
     return data;
   } catch { return null; }
 }

@@ -3,7 +3,7 @@ import { X, Clock, Search, Loader } from "lucide-react";
 import Modal from "../../../../components/ui/modal/Modal";
 import { DAYS } from "../../../../constants/days";
 import { getSeasons } from "../services/calendar-entry.service";
-import { searchJikan } from "../services/jikan.service";
+import { searchJikan, getJikanDetail } from "../services/jikan.service";
 
 const FIELD_STYLE = {
   width: "100%",
@@ -119,17 +119,35 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
     }, 400);
   };
 
-  const applyJikanSuggestion = (item) => {
-    setForm((prev) => ({
-      ...prev,
-      title:       item.titleEs || item.title,
-      imageUrl:    item.imageUrl,
-      description: item.description,
-      malId:       item.malId,
-    }));
-    setQuery(item.titleEs || item.title);
+  const applyJikanSuggestion = async (item) => {
+    const displayTitle = item.titleEs || item.title;
+    setQuery(displayTitle);
     setSuggestions([]);
     setShowDrop(false);
+    setSearching(true);
+
+    try {
+      const detail = await getJikanDetail(item.malId);
+      setForm((prev) => ({
+        ...prev,
+        title:       detail.title,
+        imageUrl:    detail.imageUrl,
+        description: detail.description,
+        malId:       detail.malId,
+      }));
+      setQuery(detail.title);
+    } catch {
+      // fallback sin traducción
+      setForm((prev) => ({
+        ...prev,
+        title:       displayTitle,
+        imageUrl:    item.imageUrl,
+        description: item.description,
+        malId:       item.malId,
+      }));
+    } finally {
+      setSearching(false);
+    }
   };
 
   const handleChange = (e) =>

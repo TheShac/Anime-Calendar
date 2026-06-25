@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Plus, Check, Pencil, Trash2, Sparkles } from "lucide-react";
+import { Plus, Check, Pencil, Trash2, Sparkles, Download } from "lucide-react";
 
 import AdminLayout       from "../../layouts/AdminLayout";
 import AdminHeader       from "../../features/admin/components/AdminHeader";
 import SeasonFormModal   from "../../features/admin/seasons/components/SeasonFormModal";
 import DeleteSeasonModal from "../../features/admin/seasons/components/DeleteSeasonModal";
+import JikanImportModal  from "../../features/admin/seasons/components/JikanImportModal";
 
 import {
   createSeason, updateSeason, deleteSeason,
@@ -21,6 +22,7 @@ export default function SeasonsPage() {
   const [saving,         setSaving]         = useState(false);
   const [activating,     setActivating]     = useState(null);
   const [markingNext,    setMarkingNext]    = useState(null);
+  const [importModal,    setImportModal]    = useState(false);
 
   useEffect(() => {
     document.title = "Temporadas — AniCalendar Admin";
@@ -105,19 +107,34 @@ export default function SeasonsPage() {
           <p style={{ fontSize: "14px", color: "#52525b" }}>
             {seasons.length} temporada{seasons.length !== 1 ? "s" : ""} registradas
           </p>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2"
-            style={{
-              background: "#10b981", color: "#000",
-              fontWeight: 800, fontSize: "14px",
-              padding: "10px 20px", borderRadius: "10px",
-              border: "none", cursor: "pointer",
-            }}
-          >
-            <Plus size={16} aria-hidden="true" />
-            Nueva temporada
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setImportModal(true)}
+              className="flex items-center gap-2"
+              style={{
+                background: "rgba(99,102,241,0.12)",
+                border: "1px solid rgba(99,102,241,0.3)",
+                color: "#818cf8", fontWeight: 700, fontSize: "14px",
+                padding: "10px 18px", borderRadius: "10px", cursor: "pointer",
+              }}
+            >
+              <Download size={15} aria-hidden="true" />
+              Importar desde Jikan
+            </button>
+            <button
+              onClick={openCreateModal}
+              className="flex items-center gap-2"
+              style={{
+                background: "#10b981", color: "#000",
+                fontWeight: 800, fontSize: "14px",
+                padding: "10px 20px", borderRadius: "10px",
+                border: "none", cursor: "pointer",
+              }}
+            >
+              <Plus size={16} aria-hidden="true" />
+              Nueva temporada
+            </button>
+          </div>
         </div>
 
         <div style={{
@@ -302,6 +319,12 @@ export default function SeasonsPage() {
         season={selectedSeason}
         onClose={() => setDeleteModal(false)}
         onConfirm={handleDelete}
+      />
+
+      <JikanImportModal
+        open={importModal}
+        onClose={() => { setImportModal(false); refetch(); }}
+        seasons={seasons}
       />
     </AdminLayout>
   );
