@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, integer } from "drizzle-orm/pg-core";
 
 export const animes = pgTable("animes", {
   id: serial("id").primaryKey(),
@@ -6,4 +6,5 @@ export const animes = pgTable("animes", {
   imageUrl: text("image_url").notNull(),
   description: text("description"),
   status: varchar("status", { length: 50 }),
+  malId: integer("mal_id").unique(),
 });

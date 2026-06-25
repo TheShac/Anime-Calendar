@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
-import { X, Clock } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Clock, Search, Loader } from "lucide-react";
 import Modal from "../../../../components/ui/modal/Modal";
 import { DAYS } from "../../../../constants/days";
 import { getSeasons } from "../services/calendar-entry.service";
+import { searchJikan } from "../services/jikan.service";
 
 const FIELD_STYLE = {
   width: "100%",
@@ -38,15 +39,22 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
   const [form, setForm] = useState({
     title: "", imageUrl: "", description: "",
     status: "crunchyroll", dayOfWeek: "lunes", time: "00:00", seasonId: "",
+    malId: null,
   });
   const [seasons, setSeasons] = useState([]);
 
-  // carga temporadas al abrir
+  // jikan search state
+  const [query, setQuery]           = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [searching, setSearching]   = useState(false);
+  const [showDrop, setShowDrop]     = useState(false);
+  const debounceRef = useRef(null);
+  const dropRef     = useRef(null);
+
   useEffect(() => {
     if (!open) return;
     getSeasons().then((data) => {
       setSeasons(data);
-      // si no hay seasonId en el form, pone la activa por defecto
       setForm((prev) => ({
         ...prev,
         seasonId: prev.seasonId || data.find((s) => s.isActive)?.id || data[0]?.id || "",
@@ -54,7 +62,6 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
     }).catch(() => {});
   }, [open]);
 
-  // rellena form al editar
   useEffect(() => {
     if (anime) {
       setForm({
@@ -65,15 +72,65 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
         dayOfWeek:   anime.dayOfWeek   || "lunes",
         time:        anime.time        || "00:00",
         seasonId:    anime.seasonId    || "",
+        malId:       anime.malId       ?? null,
       });
+      setQuery(anime.title || "");
     } else {
       setForm((prev) => ({
         title: "", imageUrl: "", description: "",
         status: "crunchyroll", dayOfWeek: "lunes", time: "00:00",
-        seasonId: prev.seasonId, // mantiene la temporada seleccionada
+        seasonId: prev.seasonId,
+        malId: null,
       }));
+      setQuery("");
     }
+    setSuggestions([]);
+    setShowDrop(false);
   }, [anime, open]);
+
+  // close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropRef.current && !dropRef.current.contains(e.target)) {
+        setShowDrop(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleTitleInput = (e) => {
+    const value = e.target.value;
+    setQuery(value);
+    setForm((prev) => ({ ...prev, title: value, malId: null }));
+
+    clearTimeout(debounceRef.current);
+    if (value.trim().length < 2) {
+      setSuggestions([]);
+      setShowDrop(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      const results = await searchJikan(value);
+      setSuggestions(results);
+      setShowDrop(results.length > 0);
+      setSearching(false);
+    }, 400);
+  };
+
+  const applyJikanSuggestion = (item) => {
+    setForm((prev) => ({
+      ...prev,
+      title:       item.titleEs || item.title,
+      imageUrl:    item.imageUrl,
+      description: item.description,
+      malId:       item.malId,
+    }));
+    setQuery(item.titleEs || item.title);
+    setSuggestions([]);
+    setShowDrop(false);
+  };
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -83,8 +140,8 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
     onSubmit(form);
   };
 
-  const focusStyle = (e) => e.target.style.borderColor = "#10b981";
-  const blurStyle  = (e) => e.target.style.borderColor = "rgba(255,255,255,0.08)";
+  const focusStyle = (e) => (e.target.style.borderColor = "#10b981");
+  const blurStyle  = (e) => (e.target.style.borderColor = "rgba(255,255,255,0.08)");
 
   return (
     <Modal isOpen={open} onClose={onClose} maxWidth="max-w-lg">
@@ -109,14 +166,102 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
 
-          {/* título */}
-          <div>
-            <label style={LABEL_STYLE}>Título</label>
-            <input
-              type="text" name="title" placeholder="Ej: Jujutsu Kaisen"
-              value={form.title} onChange={handleChange} required
-              style={FIELD_STYLE} onFocus={focusStyle} onBlur={blurStyle}
-            />
+          {/* título con búsqueda Jikan */}
+          <div ref={dropRef} style={{ position: "relative" }}>
+            <label style={LABEL_STYLE}>
+              <span className="flex items-center gap-1">
+                <Search size={10} aria-hidden="true" />
+                Título — busca en MyAnimeList
+              </span>
+            </label>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                name="title"
+                placeholder="Ej: Jujutsu Kaisen"
+                value={query}
+                onChange={handleTitleInput}
+                required
+                style={{ ...FIELD_STYLE, paddingRight: "38px" }}
+                onFocus={focusStyle}
+                onBlur={blurStyle}
+                autoComplete="off"
+              />
+              <span style={{
+                position: "absolute", right: "12px", top: "50%",
+                transform: "translateY(-50%)", color: "#52525b",
+                pointerEvents: "none",
+              }}>
+                {searching
+                  ? <Loader size={14} className="animate-spin" aria-hidden="true" />
+                  : <Search size={14} aria-hidden="true" />
+                }
+              </span>
+            </div>
+
+            {/* badge mal_id */}
+            {form.malId && (
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: "4px",
+                marginTop: "5px", fontSize: "10px", fontWeight: 600,
+                color: "#10b981", background: "rgba(16,185,129,0.1)",
+                border: "1px solid rgba(16,185,129,0.25)",
+                borderRadius: "6px", padding: "2px 7px",
+              }}>
+                MAL ID: {form.malId}
+              </span>
+            )}
+
+            {/* dropdown sugerencias */}
+            {showDrop && (
+              <ul style={{
+                position: "absolute", zIndex: 50, top: "calc(100% + 4px)", left: 0, right: 0,
+                background: "#141414",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "10px", overflow: "hidden",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+                maxHeight: "280px", overflowY: "auto",
+                listStyle: "none", margin: 0, padding: "4px 0",
+              }}>
+                {suggestions.map((item) => (
+                  <li
+                    key={item.malId}
+                    onMouseDown={() => applyJikanSuggestion(item)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "10px",
+                      padding: "8px 12px", cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    {item.imageUrl && (
+                      <img
+                        src={item.imageUrl}
+                        alt=""
+                        aria-hidden="true"
+                        style={{ width: "32px", height: "44px", objectFit: "cover", borderRadius: "4px", flexShrink: 0 }}
+                      />
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: "13px", color: "#f0f0f0", fontWeight: 600, margin: 0,
+                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {item.titleEs || item.title}
+                      </p>
+                      {item.titleEs && (
+                        <p style={{ fontSize: "11px", color: "#71717a", margin: "1px 0 0",
+                          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {item.title}
+                        </p>
+                      )}
+                      <p style={{ fontSize: "10px", color: "#52525b", margin: "2px 0 0" }}>
+                        {item.episodes ? `${item.episodes} eps` : "? eps"}
+                        {item.score ? ` · ★ ${item.score}` : ""}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {/* imagen */}
@@ -218,7 +363,8 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
           >
             {saving ? (
               <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="animate-spin" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.5" strokeLinecap="round" className="animate-spin" aria-hidden="true">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                 </svg>
                 Guardando...
