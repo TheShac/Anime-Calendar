@@ -182,7 +182,7 @@ export default function JikanImportModal({ open, onClose, seasons }) {
           </div>
 
           <div>
-            <label style={LABEL_STYLE}>Plataforma por defecto</label>
+            <label style={LABEL_STYLE}>Plataforma por defecto (si no se detecta)</label>
             <select name="defaultStatus" value={form.defaultStatus} onChange={handleChange} style={FIELD_STYLE}>
               {STATUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -197,7 +197,7 @@ export default function JikanImportModal({ open, onClose, seasons }) {
             fontSize: "11px", color: "#fbbf24", lineHeight: "1.6",
           }}>
             La sinopsis se importa en inglés. Puedes editarla individualmente desde el gestor de animes.
-            El día de emisión se asigna automáticamente según Jikan.
+            El día de emisión y la plataforma se asignan automáticamente; la plataforma por defecto solo se usa si no se detecta.
           </div>
 
           <button

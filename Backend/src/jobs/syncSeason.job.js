@@ -3,11 +3,7 @@ import { db } from "../config/db.js";
 import { animes } from "../modules/animes/anime.schema.js";
 import { inArray, isNotNull } from "drizzle-orm";
 
-const JIKAN_BASE = "https://api.jikan.moe/v4";
-
-async function delay(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+import { getAiringPage } from "../modules/jikan/anime.provider.js";
 
 async function fetchCurrentlyAiring() {
   const results = [];
@@ -15,14 +11,9 @@ async function fetchCurrentlyAiring() {
   let hasNext = true;
 
   while (hasNext) {
-    const res = await fetch(`${JIKAN_BASE}/seasons/now?page=${page}`);
-    if (!res.ok) break;
-
-    const json = await res.json();
+    const json = await getAiringPage(page);
     results.push(...(json.data || []));
     hasNext = json.pagination?.has_next_page || false;
-
-    if (hasNext) await delay(400);
     page++;
   }
 

@@ -134,6 +134,7 @@ export default function AnimeFormModal({ open, onClose, onSubmit, anime, saving 
         imageUrl:    detail.imageUrl,
         description: detail.description,
         malId:       detail.malId,
+        ...(detail.platform && { status: detail.platform }),
       }));
       setQuery(detail.title);
     } catch {

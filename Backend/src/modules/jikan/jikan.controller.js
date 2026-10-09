@@ -3,8 +3,14 @@ import { db } from "../../config/db.js";
 import { animes } from "../animes/anime.schema.js";
 import { calendarEntries } from "../calendar/calendar.schema.js";
 import { eq, and } from "drizzle-orm";
+import { JikanError } from "./jikan.client.js";
+import { anilistSeasonPlatforms, anilistPlatform } from "./anilist.client.js";
+import { searchAnime as fetchSearch, getAnime, getSeasonPage } from "./anime.provider.js";
 
-const JIKAN_BASE = "https://api.jikan.moe/v4";
+const jikanFail = (res, error, fallback) =>
+  error instanceof JikanError
+    ? errorResponse(res, error.message, error.notFound ? 404 : error.status)
+    : errorResponse(res, fallback, 502);
 
 // caché en memoria: malId → { data, expiresAt }
 const detailCache = new Map();
@@ -20,19 +26,6 @@ const DAY_MAP = {
   sundays:    "domingo",
 };
 
-async function translateToSpanish(text) {
-  if (!text) return "";
-  try {
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 500))}&langpair=en|es`;
-    const res = await fetch(url);
-    if (!res.ok) return text;
-    const json = await res.json();
-    return json.responseData?.translatedText || text;
-  } catch {
-    return text;
-  }
-}
-
 function parseBroadcastTime(timeStr) {
   if (!timeStr) return "00:00";
   const match = timeStr.match(/(\d{2}:\d{2})/);
@@ -44,21 +37,13 @@ function mapDay(broadcastDay) {
   return DAY_MAP[broadcastDay.toLowerCase()] || "lunes";
 }
 
-async function delay(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 // GET /admin/jikan/search?q=
 export const searchAnimes = async (req, res) => {
   const { q } = req.query;
   if (!q || q.trim().length < 2) return successResponse(res, []);
 
   try {
-    const url = `${JIKAN_BASE}/anime?q=${encodeURIComponent(q.trim())}&limit=8&sfw=true`;
-    const response = await fetch(url);
-    if (!response.ok) return errorResponse(res, "Error al contactar Jikan API", response.status);
-
-    const json = await response.json();
+    const json = await fetchSearch(q.trim());
     const results = (json.data || []).map((a) => ({
       malId:       a.mal_id,
       title:       a.title,
@@ -73,8 +58,8 @@ export const searchAnimes = async (req, res) => {
 
     return successResponse(res, results);
   } catch (error) {
-    console.error("[jikan] fetch error:", error);
-    return errorResponse(res, "Error al conectar con Jikan API", 502);
+    console.error("[jikan] search error:", error.message);
+    return jikanFail(res, error, "Error al conectar con Jikan API");
   }
 };
 
@@ -89,10 +74,7 @@ export const getPublicAnimeDetail = async (req, res) => {
   }
 
   try {
-    const response = await fetch(`${JIKAN_BASE}/anime/${malId}`);
-    if (!response.ok) return errorResponse(res, "Anime no encontrado en Jikan", 404);
-
-    const json = await response.json();
+    const json = await getAnime(malId);
     const a = json.data;
 
     const data = {
@@ -109,30 +91,27 @@ export const getPublicAnimeDetail = async (req, res) => {
     detailCache.set(malId, { data, expiresAt: Date.now() + CACHE_TTL });
     return successResponse(res, data);
   } catch (error) {
-    console.error("[jikan] public detail error:", error);
-    return errorResponse(res, "Error al obtener detalle", 502);
+    console.error("[jikan] public detail error:", error.message);
+    return jikanFail(res, error, "Error al obtener detalle");
   }
 };
 
-// GET /admin/jikan/detail/:malId  — traduce sinopsis al español
+// GET /admin/jikan/detail/:malId
 export const getAnimeDetail = async (req, res) => {
   const { malId } = req.params;
 
   try {
-    const response = await fetch(`${JIKAN_BASE}/anime/${malId}`);
-    if (!response.ok) return errorResponse(res, "Anime no encontrado en Jikan", 404);
-
-    const json = await response.json();
+    const json = await getAnime(malId);
     const a = json.data;
-
-    const descriptionEs = await translateToSpanish(a.synopsis || "");
+    const platform = await anilistPlatform(malId).catch(() => null);
 
     return successResponse(res, {
+      platform,
       malId:       a.mal_id,
       title:       a.title_spanish || a.title,
       titleOriginal: a.title,
       imageUrl:    a.images?.jpg?.large_image_url || a.images?.jpg?.image_url || "",
-      description: descriptionEs,
+      description: a.synopsis || "",
       score:       a.score,
       episodes:    a.episodes,
       genres:      (a.genres || []).map((g) => g.name),
@@ -140,8 +119,8 @@ export const getAnimeDetail = async (req, res) => {
       broadcastTime: a.broadcast?.time  || null,
     });
   } catch (error) {
-    console.error("[jikan] detail error:", error);
-    return errorResponse(res, "Error al obtener detalle de Jikan", 502);
+    console.error("[jikan] detail error:", error.message);
+    return jikanFail(res, error, "Error al obtener detalle de Jikan");
   }
 };
 
@@ -167,20 +146,26 @@ export const importSeason = async (req, res) => {
   try {
     let page = 1;
     let hasNext = true;
+    // plataforma de cada anime según AniList; si falla o no hay dato, se usa defaultStatus
+    let platforms = new Map();
+    try {
+      platforms = await anilistSeasonPlatforms(year, season);
+    } catch (err) {
+      console.warn("[jikan] no se pudo detectar plataformas:", err.message);
+    }
+    let detected = 0;
     let imported = 0;
     let skipped = 0;
     const errors = [];
 
     while (hasNext) {
-      const url = `${JIKAN_BASE}/seasons/${year}/${season}?page=${page}`;
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        if (response.status === 404) break;
-        throw new Error(`Jikan respondió ${response.status} en página ${page}`);
+      let json;
+      try {
+        json = await getSeasonPage(year, season, page);
+      } catch (err) {
+        if (err instanceof JikanError && err.notFound) break;
+        throw err;
       }
-
-      const json = await response.json();
       const items = json.data || [];
       hasNext = json.pagination?.has_next_page || false;
 
@@ -190,16 +175,18 @@ export const importSeason = async (req, res) => {
           const title    = a.title_spanish || a.title;
           const imageUrl = a.images?.jpg?.large_image_url || a.images?.jpg?.image_url || "";
           const description = a.synopsis || "";
+          const platform    = platforms.get(malId);
+          if (platform) detected++;
           const dayOfWeek   = mapDay(a.broadcast?.day);
           const time        = parseBroadcastTime(a.broadcast?.time) || defaultTime;
 
           // upsert anime por mal_id
           const [anime] = await db
             .insert(animes)
-            .values({ title, imageUrl, description, status: defaultStatus, malId })
+            .values({ title, imageUrl, description, status: platform || defaultStatus, malId })
             .onConflictDoUpdate({
               target: animes.malId,
-              set: { title, imageUrl, description },
+              set: { title, imageUrl, description, ...(platform && { status: platform }) },
             })
             .returning();
 
@@ -228,13 +215,12 @@ export const importSeason = async (req, res) => {
         }
       }
 
-      if (hasNext) await delay(400);
       page++;
     }
 
-    return successResponse(res, { imported, skipped, errors }, `Importación completada: ${imported} nuevos, ${skipped} ya existentes`);
+    return successResponse(res, { imported, skipped, detected, errors }, `Importación completada: ${imported} nuevos, ${skipped} ya existentes (${detected} con plataforma detectada)`);
   } catch (error) {
-    console.error("[jikan] import error:", error);
-    return errorResponse(res, `Error en importación: ${error.message}`, 502);
+    console.error("[jikan] import error:", error.message);
+    return errorResponse(res, `Error en importación: ${error.message}`, error instanceof JikanError ? error.status : 502);
   }
 };
